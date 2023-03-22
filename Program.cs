@@ -21,6 +21,7 @@ namespace write_serial_from_mdb
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
             //Application.Run(new Form1());
+           
             serialWrite.serialSend.consoleMain();
            
         }
@@ -114,6 +115,7 @@ namespace serialWrite
         public static int timestr2int(string mytime)
         {
             int position;
+            if ((mytime == null)||(mytime.Length==0)) return 0;
             position = mytime.IndexOf(':');
             if (position >= 0)
             {
@@ -130,7 +132,6 @@ namespace serialWrite
         public static void consoleMain()
         {
             Application.EnableVisualStyles();
-            Application.SetCompatibleTextRenderingDefault(false);
 
             StringComparer stringComparer = StringComparer.OrdinalIgnoreCase;
             _serialPort = new SerialPort();
@@ -163,17 +164,27 @@ namespace serialWrite
             int laneNo;
             int[] myIntTime = new int[10];
             int[] laneNoArray = new int[10] { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 };
+            int vacantCount;
 
+            vacantCount = 0;
 
             for (laneNo = 1; laneNo <= maxLaneNo; laneNo++)
             {
                 myIntTime[laneNo] = timestr2int(myTime[laneNo]);
             }
             Array.Sort(myIntTime, laneNoArray, 1, maxLaneNo);
-            for (int i = 1; i <= maxLaneNo; i++)
-                send_time(laneNoArray[i], myIntTime[i], i, goal);
+            for (int i = 1; i <= maxLaneNo; i++) {
+               if (myIntTime[i]==0)
+                {
+                    vacantCount++;
+                } else 
+                send_time(laneNoArray[i], myIntTime[i], i-vacantCount, goal);
         
-
+            }
+            Console.WriteLine("");
+            Console.WriteLine("-------------------------");
+            Console.WriteLine("");
+           
         }
 
         public static void WriteData()
@@ -182,21 +193,25 @@ namespace serialWrite
             access_db.program_db prgDB = new access_db.program_db(fromMDB);
             int prgNo = 0;
             int kumi=0;
+            int orgPrgNo;
+            int orgKumi;
             int laneNo;
             int lapcount;
-            string startdata = "AR       0.0 S  ";
+//            string startdata = "AR       0.0 S  ";
             string[] lapTime = new string[10];
-            int lapInterval = prgDB.Get_lap_interval(); ;
             int maxLapcount;
             int maxKumi;
-            int firstLaneNo = 1;
+            int firstLaneNo ;
             maxLaneNo = prgDB.Get_max_laneNo();
 
             while (prgDB.get_next_race(ref prgNo, ref kumi))
             {
                 maxLapcount = prgDB.Get_distance(prgNo) / prgDB.Get_lap_interval();
+                orgPrgNo = prgNo; orgKumi = kumi;
                 for (lapcount = 1; lapcount <= maxLapcount; lapcount++)
                 {
+                    firstLaneNo = 1;
+                    prgNo = orgPrgNo; kumi = orgKumi;
                     do
                     {
                         for (laneNo = firstLaneNo; laneNo <= maxLaneNo; laneNo++)
@@ -206,6 +221,7 @@ namespace serialWrite
                         firstLaneNo = prgDB.can_go_with_next(ref prgNo, ref kumi);
                     } while (firstLaneNo>0);
                     SendData4OneRace(lapTime, (lapcount == maxLapcount));
+                    
                     Thread.Sleep(5000);
                 }
                 Thread.Sleep(5000);

@@ -1,4 +1,5 @@
 bin
+App.config
 Form1.cs
 Form1.Designer.cs
 obj
